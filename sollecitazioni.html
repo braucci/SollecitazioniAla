@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Analisi Sollecitazioni Semiala — Prof. B. Raucci</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --g0:#000;--g1:rgba(0,7,2,.97);--g2:rgba(0,12,4,.94);--g3:rgba(0,18,6,.90);
+  --gB:rgba(0,255,65,.17);--gBB:rgba(0,255,65,.40);--gBBB:rgba(0,255,65,.68);
+  --gbr:#00ff41;--gmd:#00cc33;--gdm:#005e12;--ggh:rgba(0,255,65,.05);
+  --gt1:#b3ffb3;--gt2:#00cc33;--gt3:#003d0a;
+  --gT:#00ff41;--gMf:#7fff00;--gN:#33e060;
+  --fvt:'VT323',monospace;--fst:'Share Tech Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scrollbar-width:thin;scrollbar-color:var(--gmd) #000}
+::-webkit-scrollbar{width:4px;background:#000}
+::-webkit-scrollbar-thumb{background:var(--gmd)}
+#matbg{position:fixed;inset:0;z-index:0;width:100%;height:100%;opacity:.5}
+.scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.08) 3px,rgba(0,0,0,.08) 4px)}
+body{font-family:var(--fst);color:var(--gbr);background:#000;min-height:100vh;overflow-x:hidden}
+.page{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding:1.2rem 1.4rem 4rem}
+
+/* ── HEADER ── */
+.hdr{border:1px solid var(--gBB);background:var(--g1);margin-bottom:1.1rem;
+  display:grid;grid-template-columns:1fr auto;
+  box-shadow:0 0 30px rgba(0,255,65,.08),inset 0 0 40px rgba(0,255,65,.02)}
+.hdr-main{padding:.75rem 1.1rem;border-right:1px solid var(--gB)}
+.hdr-school{font-family:var(--fvt);font-size:1rem;color:var(--gmd);letter-spacing:.14em;margin-bottom:.1rem}
+.hdr-title{font-family:var(--fvt);font-size:1.75rem;color:var(--gbr);letter-spacing:.06em;
+  text-shadow:0 0 18px rgba(0,255,65,.55);line-height:1.05;margin:.1rem 0}
+.hdr-sub{font-size:.62rem;color:var(--gdm);letter-spacing:.12em;text-transform:uppercase}
+.hdr-prof{padding:.75rem 1.3rem;display:flex;flex-direction:column;justify-content:center;gap:.25rem;text-align:right}
+.prof-lbl{font-size:.58rem;color:var(--gdm);letter-spacing:.18em;text-transform:uppercase}
+.prof-name{font-family:var(--fvt);font-size:1.45rem;color:var(--gbr);
+  text-shadow:0 0 12px rgba(0,255,65,.45);letter-spacing:.1em}
+.status-row{display:flex;align-items:center;justify-content:flex-end;gap:.45rem;
+  font-size:.58rem;color:var(--gmd);letter-spacing:.1em}
+.blink{color:var(--gbr);text-shadow:0 0 8px var(--gbr);animation:blink 1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── CASES ── */
+.cases{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;
+  margin-bottom:1.1rem;background:var(--gBB);border:1px solid var(--gBB)}
+.case-btn{background:var(--g1);border:none;color:var(--gdm);font-family:var(--fst);
+  font-size:.64rem;padding:.72rem .9rem;text-align:left;cursor:pointer;
+  transition:background .14s,color .14s;line-height:1.5}
+.case-btn::before{content:'[ ]  ';color:var(--gdm)}
+.case-btn.on::before{content:'[■]  ';color:var(--gbr)}
+.case-btn:hover:not(.on){background:var(--g2);color:var(--gmd)}
+.case-btn.on{background:var(--g2);color:var(--gbr)}
+.cb-sec{display:block;font-size:.57rem;color:var(--gmd);letter-spacing:.1em;margin-bottom:.12rem}
+.cb-file{display:block;font-family:var(--fvt);font-size:.85rem;letter-spacing:.05em;margin-bottom:.08rem}
+.cb-desc{display:block;font-size:.59rem;color:var(--gdm)}
+.case-btn.on .cb-desc{color:var(--gmd)}
+
+/* ── WORKSPACE ── */
+.ws{display:grid;grid-template-columns:275px 1fr;gap:.8rem;align-items:start}
+
+/* ── INPUT PANEL ── */
+.inp-pnl{background:var(--g1);border:1px solid var(--gBB);position:sticky;top:.75rem;
+  box-shadow:0 0 20px rgba(0,255,65,.06)}
+.pnl-title{font-family:var(--fvt);font-size:1.15rem;color:var(--gbr);
+  padding:.55rem .9rem;border-bottom:1px solid var(--gB);letter-spacing:.12em;
+  text-shadow:0 0 10px rgba(0,255,65,.3);display:flex;align-items:center;gap:.4rem}
+.pnl-title::before{content:'> ';color:var(--gmd)}
+.pnl-body{padding:.75rem .9rem}
+.fg{margin-bottom:.62rem}
+.fg-lbl{display:block;font-size:.61rem;color:var(--gdm);letter-spacing:.04em;margin-bottom:.2rem}
+.fg-lbl::before{content:'// ';color:var(--gt3)}
+.fg-lbl em{color:var(--gmd);font-style:normal;font-weight:700}
+.fg-row{display:flex;align-items:stretch;border:1px solid var(--gB);background:var(--g3);
+  transition:border-color .15s}
+.fg-row:focus-within{border-color:var(--gBBB);box-shadow:0 0 10px rgba(0,255,65,.12)}
+.fg-row::before{content:'>';display:flex;align-items:center;padding:0 .48rem;
+  color:var(--gmd);font-size:.85rem;border-right:1px solid var(--gB);background:rgba(0,255,65,.04)}
+.fg-row input[type=number]{flex:1;min-width:0;background:transparent;border:none;
+  color:var(--gbr);font-family:var(--fst);font-size:.85rem;padding:.38rem .5rem;
+  outline:none;caret-color:var(--gbr)}
+.fg-row input::-webkit-inner-spin-button{opacity:0}
+.fg-un{font-size:.57rem;color:var(--gdm);padding:0 .48rem;border-left:1px solid var(--gB);
+  display:flex;align-items:center;background:rgba(0,0,0,.2);white-space:nowrap}
+.sep{height:1px;background:var(--gB);margin:.62rem 0}
+.case-note{font-size:.62rem;color:var(--gdm);line-height:1.58;
+  padding:.38rem .55rem;margin-bottom:.62rem;border-left:2px solid var(--gB)}
+.case-note::before{content:'/* '}
+.case-note::after{content:' */'}
+.calc-btn{width:100%;background:transparent;border:1px solid var(--gBB);color:var(--gbr);
+  font-family:var(--fvt);font-size:1.15rem;letter-spacing:.14em;padding:.5rem;
+  cursor:pointer;transition:all .2s;text-shadow:0 0 8px rgba(0,255,65,.3)}
+.calc-btn:hover{background:rgba(0,255,65,.07);box-shadow:0 0 22px rgba(0,255,65,.2);
+  border-color:var(--gBBB);text-shadow:0 0 18px rgba(0,255,65,.7)}
+
+/* ── RIGHT COL ── */
+.rcol{display:flex;flex-direction:column;gap:.65rem}
+
+/* ── WINDOW CHROME ── */
+.win{background:var(--g1);border:1px solid var(--gBB);
+  box-shadow:0 0 16px rgba(0,255,65,.05)}
+.win-bar{font-family:var(--fvt);font-size:1rem;color:var(--gbr);
+  padding:.32rem .82rem;border-bottom:1px solid var(--gB);letter-spacing:.1em;
+  background:rgba(0,255,65,.04);display:flex;align-items:center;gap:.5rem}
+.wbd{width:8px;height:8px;border-radius:50%;background:var(--gmd);
+  box-shadow:0 0 6px var(--gmd);flex-shrink:0}
+.win-body{padding:.6rem .82rem .55rem}
+
+/* ── SCHEMA ── */
+#schemaSvg svg{width:100%;display:block}
+
+/* ── EMPTY ── */
+.empty{background:var(--g1);border:1px dashed var(--gB);text-align:center;
+  padding:2.5rem 1rem;font-family:var(--fvt);font-size:1.25rem;color:var(--gdm);letter-spacing:.1em}
+.empty-ico{font-size:2rem;opacity:.25;margin-bottom:.4rem}
+
+/* ── REACTIONS TABLE ── */
+.rx-table{padding:.55rem .82rem;font-size:.71rem}
+.rx-row{display:grid;grid-template-columns:230px 95px 52px 1fr;
+  gap:.45rem;padding:.26rem 0;border-bottom:1px solid rgba(0,255,65,.07);align-items:baseline}
+.rx-row:last-child{border-bottom:none}
+.rx-n{color:var(--gmd);letter-spacing:.03em}
+.rx-v{color:var(--gbr);text-align:right;font-size:.86rem;text-shadow:0 0 6px rgba(0,255,65,.28)}
+.rx-u{color:var(--gdm);font-size:.61rem}
+.rx-d{color:var(--gdm);font-size:.59rem;letter-spacing:.06em;text-transform:uppercase}
+.rx-foot{padding:.28rem .82rem .5rem;display:flex;justify-content:flex-end;gap:.45rem}
+.csv-btn{background:transparent;border:1px solid var(--gB);color:var(--gdm);
+  font-family:var(--fst);font-size:.56rem;padding:.22rem .55rem;
+  cursor:pointer;transition:all .14s;letter-spacing:.08em}
+.csv-btn:hover{color:var(--gbr);border-color:var(--gBBB)}
+.png-btn{background:rgba(0,255,65,.06);border:1px solid rgba(0,255,65,.55);color:var(--gbr);
+  font-family:var(--fst);font-size:.56rem;padding:.22rem .65rem;
+  cursor:pointer;transition:all .18s;letter-spacing:.08em;
+  box-shadow:0 0 8px rgba(0,255,65,.08)}
+.png-btn:hover{background:rgba(0,255,65,.14);box-shadow:0 0 16px rgba(0,255,65,.22);border-color:var(--gBBB)}
+.png-btn:disabled{opacity:.35;cursor:not-allowed}
+.csv-btn{background:transparent;border:1px solid var(--gB);color:var(--gdm);
+  font-family:var(--fst);font-size:.56rem;padding:.22rem .55rem;
+  cursor:pointer;transition:all .14s;letter-spacing:.08em}
+.csv-btn:hover{color:var(--gbr);border-color:var(--gBBB)}
+
+/* ── CHARTS ── */
+.ch-row{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+.ch-full{/* full-width chart */}
+.ch-stats{display:flex;gap:.7rem;font-size:.58rem;padding:.18rem 0 .38rem}
+.st-mx{color:#7fff00}.st-mn{color:#ff5533}
+.ch-area{position:relative;height:152px}
+.ch-area.tall{height:165px}
+
+/* ── ERR ── */
+.err-box{background:rgba(60,0,0,.7);border:1px solid rgba(255,50,50,.4);
+  padding:.65rem .85rem;font-size:.67rem;color:#ff5533;animation:fadeUp .3s ease}
+
+/* ── ANIMS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── RESPONSIVE ── */
+@media(max-width:780px){
+  .ws{grid-template-columns:1fr}
+  .inp-pnl{position:relative;top:0}
+  .cases{grid-template-columns:1fr;gap:2px}
+  .ch-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<canvas id="matbg"></canvas>
+<div class="scanlines"></div>
+
+<div class="page">
+
+<!-- HEADER PERSONALIZZATO -->
+<div class="hdr">
+  <div class="hdr-main">
+    <div class="hdr-school">ITIS E. MAJORANA — CASSINO (FR) &nbsp;·&nbsp; COSTRUZIONI AERONAUTICHE &nbsp;·&nbsp; CLASSE 4ACA &nbsp;·&nbsp; A.S. 2024/25</div>
+    <div class="hdr-title">ANALISI SOLLECITAZIONI — SEMIALA &nbsp;§ 2.12</div>
+    <div class="hdr-sub">T(x) &mdash; TAGLIO &nbsp;|&nbsp; Mf(x) &mdash; MOMENTO FLETTENTE &nbsp;|&nbsp; N(x) &mdash; SFORZO NORMALE</div>
+  </div>
+  <div class="hdr-prof">
+    <div class="prof-lbl">Docente</div>
+    <div class="prof-name">PROF. B. RAUCCI</div>
+    <div class="status-row"><span class="blink">&#9632;</span> SISTEMA ATTIVO</div>
+  </div>
+</div>
+
+<!-- CASE SELECTOR -->
+<div class="cases" id="cases">
+  <button class="case-btn on" onclick="setCase(1)">
+    <span class="cb-sec">§ 2.12.2</span>
+    <span class="cb-file">ALA_CONTROVENTATA.DAT</span>
+    <span class="cb-desc">Pianta rettangolare &mdash; carico distribuito uniforme</span>
+  </button>
+  <button class="case-btn" onclick="setCase(2)">
+    <span class="cb-sec">§ 2.12.3</span>
+    <span class="cb-file">ALA_SBALZO_MOTORE.DAT</span>
+    <span class="cb-desc">Incastro in R &mdash; sovrapposizione effetti</span>
+  </button>
+  <button class="case-btn" onclick="setCase(3)">
+    <span class="cb-sec">§ 2.12.4</span>
+    <span class="cb-file">ALA_RASTREMATA.DAT</span>
+    <span class="cb-desc">Sbalzo &mdash; portanza trapezoidale + motore</span>
+  </button>
+</div>
+
+<!-- WORKSPACE -->
+<div class="ws">
+  <!-- INPUT PANEL -->
+  <div class="inp-pnl">
+    <div class="pnl-title">PARAMETRI INPUT</div>
+    <div class="pnl-body">
+      <div id="fields"></div>
+      <div class="sep"></div>
+      <div id="cnote" class="case-note"></div>
+      <button class="calc-btn" id="cbtn" onclick="onCalc()">&gt; ESEGUI CALCOLO_</button>
+    </div>
+  </div>
+  <!-- RIGHT COLUMN -->
+  <div class="rcol" id="rcol">
+    <div class="win" id="schemaWin">
+      <div class="win-bar"><div class="wbd"></div>SCHEMA STRUTTURALE &mdash; AGGIORNAMENTO REAL-TIME</div>
+      <div class="win-body"><div id="schemaSvg"></div></div>
+    </div>
+    <div class="empty" id="emptyState">
+      <div class="empty-ico">&#8767;</div>
+      CONFIGURARE PARAMETRI E PREMERE ESEGUI CALCOLO
+    </div>
+    <div id="resArea"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+/* ════ MATRIX RAIN ════ */
+(function(){
+  const cv=document.getElementById('matbg');
+  const cx=cv.getContext('2d');
+  function sz(){cv.width=window.innerWidth;cv.height=window.innerHeight}
+  sz();window.addEventListener('resize',sz);
+  const CH='0123456789ABCDEFGHIJKLMNPQRSTUVWXYZｦｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ#$@%&*';
+  const FS=13;
+  let drops;
+  function mkD(){drops=Array.from({length:Math.floor(cv.width/FS)},()=>Math.random()*-80)}
+  mkD();window.addEventListener('resize',mkD);
+  function frame(){
+    cx.fillStyle='rgba(0,0,0,.055)';cx.fillRect(0,0,cv.width,cv.height);
+    cx.font=FS+'px monospace';
+    drops.forEach((y,i)=>{
+      const r=Math.random();
+      cx.fillStyle=r>.97?'#ccffcc':r>.55?'#00ff41':'#008f11';
+      cx.fillText(CH[Math.floor(Math.random()*CH.length)],i*FS,y*FS);
+      if(y*FS>cv.height&&Math.random()>.974)drops[i]=0;
+      drops[i]++;
+    });
+  }
+  setInterval(frame,48);
+})();
+
+/* ════ CHART PLUGINS ════ */
+Chart.register({
+  id:'glow',
+  beforeDatasetDraw(ch,a){if(a.index!==0)return;const gc=ch.config.options.glowColor;if(gc){ch.ctx.shadowBlur=12;ch.ctx.shadowColor=gc;}},
+  afterDatasetDraw(ch,a){if(a.index===0){ch.ctx.shadowBlur=0;ch.ctx.shadowColor='transparent';}}
+});
+Chart.register({
+  id:'klines',
+  afterDraw(chart){
+    const kl=chart.config.options.klines;if(!kl||!kl.length)return;
+    const{ctx,scales:{x,y},data:{labels}}=chart;ctx.save();
+    kl.forEach(k=>{
+      let ni=0,nd=Infinity;
+      labels.forEach((l,i)=>{const d=Math.abs(parseFloat(l)-k.x);if(d<nd){nd=d;ni=i;}});
+      const px=x.getPixelForValue(ni);
+      ctx.strokeStyle=k.color||'rgba(0,255,65,.3)';ctx.lineWidth=1;ctx.setLineDash([3,4]);
+      ctx.beginPath();ctx.moveTo(px,y.top);ctx.lineTo(px,y.bottom);ctx.stroke();
+      ctx.setLineDash([]);ctx.fillStyle=k.color||'rgba(0,255,65,.75)';
+      ctx.font='9.5px "Share Tech Mono",monospace';ctx.textAlign='center';
+      ctx.fillText(k.label,px,y.top-4);
+    });
+    ctx.restore();
+  }
+});
+
+/* ════ CASES CONFIG ════ */
+const CASES={
+  1:{
+    note:'Struttura iperstatica. Cerniera in R (radice), cerniera-carrello in C (controvento). La portanza p agisce VERSO L\'ALTO sul longherone. Le reazioni R_R e R_C bilanciano verso il basso. Il parametro θ determina la componente assiale N(x)=−R_C/tan(θ) nel tratto R→C.',
+    fields:[
+      {id:'l1',sym:'l₁',desc:'distanza R → controvento C',    unit:'m',  def:2.5},
+      {id:'l2',sym:'l₂',desc:'distanza C → estremità E',  unit:'m',  def:2.0},
+      {id:'p', sym:'p', desc:'portanza/m  ↑  (verso l\'alto)',  unit:'N/m',def:3000},
+      {id:'th',sym:'θ', desc:'angolo controvento dall\'orizz.',unit:'°',  def:50},
+    ]
+  },
+  2:{
+    note:'Ala a sbalzo, incastro in R. La portanza p agisce VERSO L\'ALTO. Il peso motore P₁ agisce verso il basso. Sovrapposizione: (1) carico distribuito ↑ + (2) peso motore ↓.',
+    fields:[
+      {id:'l', sym:'l', desc:'semiapertura R→E',          unit:'m',  def:4.5},
+      {id:'l1',sym:'l₁',desc:'distanza radice→motore',    unit:'m',  def:1.5},
+      {id:'p', sym:'p', desc:'portanza/m  ↑  (verso l\'alto)',  unit:'N/m',def:2800},
+      {id:'P1',sym:'P₁',desc:'peso motore  ↓  (verso il basso)', unit:'N',  def:1200},
+    ]
+  },
+  3:{
+    note:'Ala rastremata a sbalzo, incastro in R. La portanza trapezoidale p(x) agisce VERSO L\'ALTO; il peso motore Pₘ agisce verso il basso. Le formule del manuale §2.12.4 usano coordinata x da E; il grafico è mostrato R→E.',
+    fields:[
+      {id:'l', sym:'l',  desc:'semiapertura R→E',          unit:'m',  def:5.0},
+      {id:'xm',sym:'xₘ', desc:'distanza radice→motore',    unit:'m',  def:1.8},
+      {id:'pR',sym:'p_R',desc:'portanza/m alla radice  ↑', unit:'N/m',def:4000},
+      {id:'pE',sym:'p_E',desc:'portanza/m all\'estremità ↑',unit:'N/m',def:1500},
+      {id:'Pm',sym:'P_m',desc:'peso motore  ↓  (verso il basso)', unit:'N',  def:1500},
+    ]
+  }
+};
+
+let CUR=1;
+const CHTS={};
+let lxs=null,lT=null,lM=null,lN=null;
+let schTmr=null;
+
+function renderInputs(){
+  const c=CASES[CUR];
+  document.getElementById('cnote').textContent=c.note;
+  document.getElementById('fields').innerHTML=c.fields.map(f=>`
+    <div class="fg">
+      <label class="fg-lbl"><em>${f.sym}</em> — ${f.desc}</label>
+      <div class="fg-row">
+        <input type="number" id="f_${f.id}" value="${f.def}" step="any" oninput="qSchema()">
+        <div class="fg-un">${f.unit}</div>
+      </div>
+    </div>`).join('');
+  renderSchema();
+}
+
+function setCase(n){
+  CUR=n;
+  document.querySelectorAll('.case-btn').forEach((b,i)=>b.classList.toggle('on',i===n-1));
+  renderInputs();clearRes();
+}
+function clearRes(){
+  Object.values(CHTS).forEach(c=>c.destroy());for(const k in CHTS)delete CHTS[k];
+  lxs=lT=lM=lN=null;
+  document.getElementById('resArea').innerHTML='';
+  document.getElementById('emptyState').style.display='';
+}
+const gv=id=>{const e=document.getElementById('f_'+id);return e?parseFloat(e.value)||0:0;};
+const qSchema=()=>{clearTimeout(schTmr);schTmr=setTimeout(renderSchema,90);};
+
+/* ════ SVG HELPERS (green Matrix palette) ════ */
+const NS='http://www.w3.org/2000/svg';
+const mkSVG=(W,H)=>{const s=document.createElementNS(NS,'svg');s.setAttribute('viewBox',`0 0 ${W} ${H}`);return s;};
+function sln(p,x1,y1,x2,y2,col,w=1.5,op=1,dash=''){
+  const e=document.createElementNS(NS,'line');
+  Object.entries({x1,y1,x2,y2,stroke:col,'stroke-width':w,opacity:op,'stroke-dasharray':dash}).forEach(([k,v])=>e.setAttribute(k,v));
+  p.appendChild(e);
+}
+function spoly(p,pts,fill,stroke,sw=1.5,op=1){
+  const e=document.createElementNS(NS,'polygon');
+  e.setAttribute('points',pts.map(q=>q.join(',')).join(' '));
+  e.setAttribute('fill',fill);e.setAttribute('stroke',stroke);
+  e.setAttribute('stroke-width',sw);e.setAttribute('opacity',op);
+  p.appendChild(e);
+}
+function scirc(p,cx,cy,r,fill,stroke,sw=1.5){
+  const e=document.createElementNS(NS,'circle');
+  Object.entries({cx,cy,r,fill,stroke,'stroke-width':sw}).forEach(([k,v])=>e.setAttribute(k,v));
+  p.appendChild(e);
+}
+function spath(p,d,fill,stroke,sw=1.8){
+  const e=document.createElementNS(NS,'path');
+  Object.entries({d,fill,stroke,'stroke-width':sw}).forEach(([k,v])=>e.setAttribute(k,v));
+  p.appendChild(e);
+}
+function stxt(p,x,y,t,fill,fs=11,anc='middle',fw='400'){
+  const e=document.createElementNS(NS,'text');
+  Object.entries({x,y,fill,'font-size':fs,'font-family':'"Share Tech Mono",monospace',
+    'text-anchor':anc,'dominant-baseline':'middle','font-weight':fw}).forEach(([k,v])=>e.setAttribute(k,v));
+  e.textContent=t;p.appendChild(e);
+}
+function dimL(p,x1,x2,y,lbl){
+  if(Math.abs(x2-x1)<3)return;
+  const col='rgba(0,100,28,.5)';
+  sln(p,x1,y-4,x1,y+4,col,1);sln(p,x2,y-4,x2,y+4,col,1);sln(p,x1,y,x2,y,col,1);
+  stxt(p,(x1+x2)/2,y+13,lbl,'rgba(0,140,45,.7)',9.5);
+}
+function dArr(p,x,yt,yb,col='#00cc33',lw=1.3,op=0.65){
+  sln(p,x,yt,x,yb-6,col,lw,'',op);
+  spoly(p,[[x-3,yb-8],[x+3,yb-8],[x,yb]],col,'none',0,op);
+}
+function uArr(p,x,yt,yb,col='#7fff00',lw=2,op=1){
+  sln(p,x,yb,x,yt+5,col,lw,'',op);
+  spoly(p,[[x-3.5,yt+7],[x+3.5,yt+7],[x,yt]],col,'none',1,op);
+}
+function hinge(p,cx,cy,col='#00ff41'){
+  spoly(p,[[cx,cy],[cx-11,cy+18],[cx+11,cy+18]],'none',col);
+  sln(p,cx-15,cy+20,cx+15,cy+20,col,1.3,'',0.45);
+}
+function rollerH(p,cx,cy,col='#00cc33'){
+  spoly(p,[[cx,cy],[cx-11,cy+17],[cx+11,cy+17]],'none',col);
+  scirc(p,cx,cy+21,4,'none',col);
+  sln(p,cx-16,cy+26,cx+16,cy+26,col,1.3,'',0.45);
+}
+function fixWall(p,cx,cy,col='#00ff41'){
+  sln(p,cx,cy-18,cx,cy+18,col,2.5);
+  for(let i=-14;i<=14;i+=7)sln(p,cx,cy+i,cx-9,cy+i+7,'rgba(0,140,45,.38)',1.2);
+}
+function momArc(p,cx,cy,col='#7fff00'){
+  spath(p,`M ${cx-8} ${cy-22} A 22 22 0 0 0 ${cx-28} ${cy-3}`,'none',col,1.8);
+  spoly(p,[[cx-31,cy-7],[cx-24,cy-2],[cx-33,cy+2]],col,'none');
+}
+
+/* ════ SCHEMA RENDERER ════ */
+function renderSchema(){
+  const W=600,H=210,YB=88,ML=54,BW=W-ML-24;
+  const svg=mkSVG(W,H);
+  if(CUR===1)schema1(svg,YB,ML,BW);
+  else if(CUR===2)schema2(svg,YB,ML,BW);
+  else schema3(svg,YB,ML,BW);
+  const c=document.getElementById('schemaSvg');c.innerHTML='';c.appendChild(svg);
+}
+
+function schema1(svg,YB,ML,BW){
+  const l1=gv('l1'),l2=gv('l2'),p=gv('p'),th=gv('th');
+  const l=Math.max(l1+l2,.01),xR=ML,xC=ML+(l1/l)*BW,xE=ML+BW;
+  const RC=p*l*l/(2*Math.max(l1,.01)),RR=p*l-RC;
+  const NA=15;
+  /* portanza distribuita — frecce verso l'ALTO (dal longherone verso l'alto) */
+  for(let i=0;i<=NA;i++) uArr(svg,xR+(xE-xR)*i/NA,YB-52,YB,'#00cc33',1.3,.65);
+  sln(svg,xR,YB-52,xE,YB-52,'#00cc33',1.8,'',0.65);  /* cap line in cima */
+  stxt(svg,(xR+xE)/2,YB-65,`p = ${p} N/m  ↑`,'#00cc33',10.5);
+  sln(svg,xR,YB,xE,YB,'#00ff41',3.5);
+  hinge(svg,xR,YB,'#00ff41');rollerH(svg,xC,YB,'#00cc33');
+  scirc(svg,xE,YB,4.5,'none','rgba(0,255,65,.45)');
+  if(RR>=0)dArr(svg,xR,YB+18,YB+48,'#00cc33',2,1);
+  else uArr(svg,xR,YB+18,YB+48,'#7fff00',2);
+  stxt(svg,xR,YB+60,RR>=0?'R_R ↓':'R_R ↑',RR>=0?'#00cc33':'#7fff00',9.5);
+  dArr(svg,xC,YB+18,YB+48,'#00cc33',2,1);
+  stxt(svg,xC,YB+60,'R_C ↓','#00cc33',9.5);
+  if(th>0&&th<90){
+    const tr=th*Math.PI/180,sL=32;
+    sln(svg,xC,YB+20,xC+Math.cos(Math.PI-tr)*sL,YB+20+Math.sin(tr)*sL,'rgba(127,255,0,.5)',1.4,'5,3');
+    stxt(svg,xC+18,YB+32,`θ=${th}°`,'rgba(127,255,0,.6)',9,'start');
+  }
+  dimL(svg,xR,xC,YB+73,`l₁=${l1} m`);dimL(svg,xC,xE,YB+73,`l₂=${l2} m`);
+  stxt(svg,xR,YB-8,'R','#00ff41',12,'middle','600');
+  stxt(svg,xC,YB-12,'C','#00cc33',12,'middle','600');
+  stxt(svg,xE,YB-8,'E','rgba(0,255,65,.65)',12,'middle','600');
+}
+
+function schema2(svg,YB,ML,BW){
+  const l=Math.max(gv('l'),.01),l1=gv('l1'),p=gv('p');
+  const xR=ML+18,xP=xR+(l1/l)*(BW-18),xE=xR+(BW-18);
+  const NA=15;
+  /* portanza distribuita — frecce verso l'ALTO */
+  for(let i=0;i<=NA;i++) uArr(svg,xR+(xE-xR)*i/NA,YB-50,YB,'#00cc33',1.3,.65);
+  sln(svg,xR,YB-50,xE,YB-50,'#00cc33',1.8,'',0.65);  /* cap line in cima */
+  stxt(svg,(xR+xE)/2,YB-63,`p = ${p} N/m  ↑`,'#00cc33',10.5);
+  /* P₁ — freccia verso il basso DAL longherone */
+  sln(svg,xP,YB,xP,YB+46,'#7fff00',2.5);
+  spoly(svg,[[xP-4,YB+42],[xP+4,YB+42],[xP,YB+52]],'#7fff00','none');
+  /* punto di applicazione sul longherone */
+  scirc(svg,xP,YB,5.5,'#001400','#7fff00',1.8);
+  stxt(svg,xP,YB+63,'P₁ ↓','#7fff00',10.5,'middle','600');
+  sln(svg,xR,YB,xE,YB,'#00ff41',3.5);
+  fixWall(svg,xR,YB,'#00ff41');scirc(svg,xE,YB,4.5,'none','rgba(0,255,65,.42)');
+  dArr(svg,xR,YB+18,YB+48,'#00cc33',2,1);stxt(svg,xR,YB+60,'R_R','#00cc33',9.5);
+  momArc(svg,xR,YB,'#7fff00');stxt(svg,xR-40,YB-14,'M_R','#7fff00',9.5,'middle');
+  dimL(svg,xR,xP,YB+73,`l₁=${l1} m`);dimL(svg,xR,xE,YB+86,`l=${l} m`);
+  stxt(svg,xR+10,YB-8,'R','#00ff41',12,'start','600');
+  stxt(svg,xE,YB-8,'E','rgba(0,255,65,.62)',12,'middle','600');
+}
+
+function schema3(svg,YB,ML,BW){
+  const l=Math.max(gv('l'),.01),xm=gv('xm'),pR=gv('pR'),pE=gv('pE');
+  const xR=ML+18,xM=xR+(xm/l)*(BW-18),xE=xR+(BW-18);
+  const hR=54,hE=Math.max(11,(pE/Math.max(pR,.01))*54);
+  /* portanza trapezoidale — frecce verso l'ALTO (dal longherone verso l'alto) */
+  for(let i=0;i<=NA;i++){
+    const t=i/NA,x=xR+(xE-xR)*t,h=hR+(hE-hR)*t;
+    uArr(svg,x,YB-h,YB,'#00cc33',1.3,.65);
+  }
+  /* cap line inclinata in cima alle frecce (profilo trapezoidale) */
+  sln(svg,xR,YB-hR,xE,YB-hE,'#00cc33',1.8,'',0.65);
+  stxt(svg,xR+2,YB-hR-9,`p_R=${gv('pR')} ↑`,'#00cc33',9.5,'start');
+  stxt(svg,xE-2,YB-hE-9,`p_E=${gv('pE')} ↑`,'#00cc33',9.5,'end');
+  const hT=Math.max(hR,hE)+15;
+  /* Pₘ — freccia verso il basso DAL longherone */
+  sln(svg,xM,YB,xM,YB+46,'#7fff00',2.5);
+  spoly(svg,[[xM-4,YB+42],[xM+4,YB+42],[xM,YB+52]],'#7fff00','none');
+  /* punto di applicazione sul longherone */
+  scirc(svg,xM,YB,5.5,'#001400','#7fff00',1.8);
+  stxt(svg,xM,YB+63,'Pₘ ↓','#7fff00',10.5,'middle','600');
+  sln(svg,xR,YB,xE,YB,'#00ff41',3.5);
+  fixWall(svg,xR,YB,'#00ff41');scirc(svg,xE,YB,4.5,'none','rgba(0,255,65,.42)');
+  dArr(svg,xR,YB+18,YB+48,'#00cc33',2,1);stxt(svg,xR,YB+60,'R_R','#00cc33',9.5);
+  momArc(svg,xR,YB,'#7fff00');stxt(svg,xR-40,YB-14,'M_R','#7fff00',9.5,'middle');
+  dimL(svg,xR,xM,YB+73,`xₘ=${xm} m`);dimL(svg,xR,xE,YB+86,`l=${l} m`);
+  stxt(svg,xR+10,YB-8,'R','#00ff41',12,'start','600');
+  stxt(svg,xE,YB-8,'E','rgba(0,255,65,.62)',12,'middle','600');
+}
+
+/* ════ COMPUTE ════ */
+const NP=400;
+const lin=(a,b,n)=>Array.from({length:n},(_,i)=>a+(b-a)*i/(n-1));
+
+function compute(){
+  if(CUR===1){
+    const l1=gv('l1'),l2=gv('l2'),p=gv('p'),th=gv('th');
+    if(l1<=0||l2<=0||p<=0)throw 'l₁, l₂, p devono essere > 0';
+    if(th<=0||th>=90)throw 'θ deve essere compreso in (0°, 90°)';
+    const l=l1+l2,RC=p*l*l/(2*l1),RR=p*l-RC;
+    const thr=th*Math.PI/180,Ncomp=-RC/Math.tan(thr);
+    const xs=lin(0,l,NP);
+    const T=xs.map(x=>x<=l1?p*x-RR:p*x-RR-RC);
+    const Mf=xs.map(x=>x<=l1?.5*p*x*x-RR*x:.5*p*x*x-RR*x-RC*(x-l1));
+    const N=xs.map(x=>x<=l1?Ncomp:0);
+    return{xs,T,Mf,N,klines:[{x:l1,label:'C - strutto',color:'rgba(0,255,65,.45)'}],rxs:[
+      {n:'R_R',             v:RR,    u:'N',   d:RR>=0?'↓ verso il basso':'↑ verso l\'alto [l₁<l₂]'},
+      {n:'R_C',             v:RC,    u:'N',   d:'↓ verso il basso (controvento)'},
+      {n:'N (R→C)',         v:Ncomp, u:'N',   d:`COMPRESSIONE — N = −R_C/tan(${th}°)`},
+      {n:'l = l₁+l₂',      v:l1+l2, u:'m',   d:'apertura semiala totale'},
+    ]};
+  }
+  if(CUR===2){
+    const l=gv('l'),l1=gv('l1'),p=gv('p'),P1=gv('P1');
+    if(l<=0)throw 'l deve essere > 0';
+    if(l1<0||l1>l)throw 'Verificare: 0 ≤ l₁ ≤ l';
+    if(p<=0)throw 'p deve essere > 0';
+    if(P1<0)throw 'P₁ deve essere ≥ 0';
+    const Rp=p*l,Mp=.5*p*l*l,RR=Rp-P1,MR=Mp-P1*l1;
+    const xs=lin(0,l,NP);
+    const T=xs.map(x=>(p*x-Rp)+(x<=l1?P1:0));
+    const Mf=xs.map(x=>(.5*p*x*x+Mp-Rp*x)+(x<=l1?P1*x-P1*l1:0));
+    const N=new Array(NP).fill(0);
+    return{xs,T,Mf,N,klines:[{x:l1,label:'P₁ motore',color:'rgba(127,255,0,.45)'}],rxs:[
+      {n:'R_R = p·l − P₁',    v:RR, u:'N',   d:'reazione verticale all\'incastro'},
+      {n:"M_R = ½pl² − P₁l₁", v:MR, u:'N·m', d:'momento all\'incastro'},
+      {n:"R'_R = p·l",          v:Rp, u:'N',   d:'sistema 1 — solo portanza'},
+      {n:'N(x) = 0',            v:0,  u:'N',   d:'NESSUN CARICO ASSIALE APPLICATO'},
+    ]};
+  }
+  const l=gv('l'),xm=gv('xm'),pR=gv('pR'),pE=gv('pE'),Pm=gv('Pm');
+  if(l<=0)throw 'l deve essere > 0';
+  if(xm<0||xm>l)throw 'Verificare: 0 ≤ xₘ ≤ l';
+  if(pR<=0||pE<=0)throw 'p_R e p_E devono essere > 0';
+  if(Pm<0)throw 'Pₘ deve essere ≥ 0';
+  const xmt=l-xm,xman=lin(0,l,NP);
+  const Tr=xman.map(x=>(pR-pE)*x*x/(2*l)+pE*x+(x>=xmt?-Pm:0));
+  const Mr=xman.map(x=>(pR-pE)*x*x*x/(6*l)+pE*x*x/2+(x>=xmt?-Pm*(x-xmt):0));
+  const xs=lin(0,l,NP),T=Tr.slice().reverse(),Mf=Mr.slice().reverse();
+  return{xs,T,Mf,N:new Array(NP).fill(0),klines:[{x:xm,label:'Pₘ motore',color:'rgba(127,255,0,.45)'}],rxs:[
+    {n:'R_R',     v:Tr[NP-1], u:'N',   d:'reazione verticale all\'incastro'},
+    {n:'M_R',     v:Mr[NP-1], u:'N·m', d:'momento all\'incastro'},
+    {n:'p_R−p_E', v:pR-pE,    u:'N/m', d:'variazione portanza lungo la semiapertura'},
+    {n:'N(x) = 0',v:0,        u:'N',   d:'NESSUN CARICO ASSIALE APPLICATO'},
+  ]};
+}
+
+/* ════ HELPERS ════ */
+const extr=(arr,xs)=>{
+  let mx=arr[0],mxi=0,mn=arr[0],mni=0;
+  arr.forEach((v,i)=>{if(v>mx){mx=v;mxi=i;}if(v<mn){mn=v;mni=i;}});
+  return{mx,mxx:xs[mxi],mn,mnx:xs[mni]};
+};
+const sgn=v=>(v>=0?'+':'')+v.toFixed(1);
+const f3=v=>v.toFixed(3);
+
+/* ════ CALC HANDLER ════ */
+async function onCalc(){
+  const btn=document.getElementById('cbtn');
+  btn.textContent='> ELABORAZIONE IN CORSO_';btn.style.opacity='.6';
+  await new Promise(r=>setTimeout(r,155));
+  try{const res=compute();renderRes(res);lxs=res.xs;lT=res.T;lM=res.Mf;lN=res.N;}
+  catch(e){showErr(String(e));}
+  btn.textContent='> ESEGUI CALCOLO_';btn.style.opacity='1';
+}
+function showErr(msg){
+  clearCharts();document.getElementById('emptyState').style.display='none';
+  document.getElementById('resArea').innerHTML=`<div class="err-box">[ERR] ${msg}</div>`;
+}
+function clearCharts(){
+  Object.values(CHTS).forEach(c=>c.destroy());for(const k in CHTS)delete CHTS[k];
+}
+
+/* ════ RENDER RESULTS ════ */
+function renderRes({xs,T,Mf,N,rxs,klines}){
+  clearCharts();document.getElementById('emptyState').style.display='none';
+  const eT=extr(T,xs),eM=extr(Mf,xs),eN=extr(N,xs);
+  const labels=xs.map(x=>x.toFixed(2));
+
+  document.getElementById('resArea').innerHTML=`
+  <div class="win" style="animation:fadeUp .28s ease">
+    <div class="win-bar"><div class="wbd"></div>&gt;&gt; REAZIONI VINCOLARI &amp; DATI STRUTTURALI</div>
+    <div class="rx-table">
+      ${rxs.map((r,i)=>`
+        <div class="rx-row" style="animation:fadeUp .3s ease ${i*.06}s both">
+          <span class="rx-n">${r.n}</span>
+          <span class="rx-v">${typeof r.v==='number'?r.v.toFixed(1):r.v}</span>
+          <span class="rx-u">${r.u}</span>
+          <span class="rx-d">${r.d}</span>
+        </div>`).join('')}
+    </div>
+    <div class="rx-foot"><button class="csv-btn" onclick="dlCSV()">[&#8595;] ESPORTA CSV</button><button class="png-btn" id="pngBtn" onclick="exportPNG()">[&#9646;] STAMPA PNG</button></div>
+  </div>
+
+  <div class="ch-row">
+    <div class="win" style="animation:fadeUp .32s ease .08s both">
+      <div class="win-bar"><div class="wbd" style="background:#00ff41;box-shadow:0 0 7px #00ff41"></div>T(x) &mdash; TAGLIO [N]</div>
+      <div class="win-body">
+        <div class="ch-stats">
+          <span class="st-mx">MAX ${sgn(eT.mx)} @ x=${f3(eT.mxx)} m</span>
+          <span class="st-mn">MIN ${sgn(eT.mn)} @ x=${f3(eT.mnx)} m</span>
+        </div>
+        <div class="ch-area"><canvas id="chT"></canvas></div>
+      </div>
+    </div>
+    <div class="win" style="animation:fadeUp .34s ease .14s both">
+      <div class="win-bar"><div class="wbd" style="background:#33e060;box-shadow:0 0 7px #33e060"></div>N(x) &mdash; SFORZO NORMALE [N]</div>
+      <div class="win-body">
+        <div class="ch-stats">
+          <span class="st-mx">MAX ${sgn(eN.mx)} @ x=${f3(eN.mxx)} m</span>
+          <span class="st-mn">MIN ${sgn(eN.mn)} @ x=${f3(eN.mnx)} m</span>
+        </div>
+        <div class="ch-area"><canvas id="chN"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="win ch-full" style="animation:fadeUp .36s ease .2s both">
+    <div class="win-bar"><div class="wbd" style="background:#7fff00;box-shadow:0 0 7px #7fff00"></div>Mf(x) &mdash; MOMENTO FLETTENTE [N&middot;m]</div>
+    <div class="win-body">
+      <div class="ch-stats">
+        <span class="st-mx">MAX ${sgn(eM.mx)} @ x=${f3(eM.mxx)} m</span>
+        <span class="st-mn">MIN ${sgn(eM.mn)} @ x=${f3(eM.mnx)} m</span>
+      </div>
+      <div class="ch-area tall"><canvas id="chM"></canvas></div>
+    </div>
+  </div>`;
+
+  requestAnimationFrame(()=>{
+    buildChart('chT', T,  labels,'#00ff41',klines);
+    buildChart('chN', N,  labels,'#33e060',klines);
+    buildChart('chM', Mf, labels,'#7fff00',klines);
+  });
+}
+
+/* ════ CHART BUILDER ════ */
+function h2r(hex,a){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function buildChart(id,data,labels,col,klines){
+  const ctx=document.getElementById(id);if(!ctx)return;
+  const posD=data.map(v=>v>=0?v:null),negD=data.map(v=>v<=0?v:null);
+  CHTS[id]=new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[
+      {data,borderColor:col,borderWidth:2.2,backgroundColor:'transparent',fill:false,pointRadius:0,tension:.05,spanGaps:true},
+      {data:posD,borderWidth:0,backgroundColor:h2r(col,.14),fill:'origin',pointRadius:0,tension:.05,spanGaps:false},
+      {data:negD,borderWidth:0,backgroundColor:'rgba(0,200,30,.06)',fill:'origin',pointRadius:0,tension:.05,spanGaps:false},
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      animation:{duration:700,easing:'easeInOutCubic'},
+      glowColor:col,klines,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(0,5,1,.96)',borderColor:'rgba(0,255,65,.28)',borderWidth:1,
+          titleColor:'rgba(0,150,45,.8)',bodyColor:'#00ff41',padding:10,
+          titleFont:{family:'"Share Tech Mono",monospace',size:9},
+          bodyFont: {family:'"Share Tech Mono",monospace',size:10.5},
+          filter:i=>i.datasetIndex===0,
+          callbacks:{
+            title:i=>`x = ${i[0].label} m`,
+            label:i=>{
+              if(i.raw==null)return null;
+              const nm=id==='chT'?'T':id==='chN'?'N':'Mf';
+              const un=id==='chM'?'N·m':'N';
+              return ` ${nm}(x) = ${i.raw.toFixed(1)} ${un}`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          ticks:{maxTicksLimit:9,color:'rgba(0,140,45,.55)',font:{family:'"Share Tech Mono",monospace',size:8.5}},
+          grid:{color:'rgba(0,90,18,.09)'},
+          title:{display:true,text:'x [m]      R ← · · · → E',
+            color:'rgba(0,90,18,.4)',font:{family:'"Share Tech Mono",monospace',size:8}}
+        },
+        y:{
+          ticks:{maxTicksLimit:7,color:'rgba(0,140,45,.55)',font:{family:'"Share Tech Mono",monospace',size:8.5}},
+          grid:{color:c=>c.tick.value===0?'rgba(0,255,65,.22)':'rgba(0,90,18,.09)'}
+        }
+      }
+    }
+  });
+}
+
+/* ════ CSV ════ */
+function dlCSV(){
+  if(!lxs)return;
+  const rows=['x_m,T_N,Mf_Nm,N_N\n',...lxs.map((x,i)=>`${x.toFixed(3)},${lT[i].toFixed(2)},${lM[i].toFixed(2)},${lN[i].toFixed(2)}\n`)];
+  const url=URL.createObjectURL(new Blob(rows,{type:'text/csv'}));
+  Object.assign(document.createElement('a'),{href:url,download:`sollecitazioni_caso${CUR}_raucci.csv`}).click();
+  URL.revokeObjectURL(url);
+}
+
+/* ════ PNG EXPORT ════
+   Disegno interamente con Canvas 2D API — zero dipendenze da Chart.js.
+   Sfondo bianco puro, tutto nero/grigio, adatto alla stampa su carta.
+   Layout verticale: intestazione → schema SVG → tabella reazioni → T · N · Mf
+════════════════════════════════════════════════════════════════════════ */
+async function exportPNG(){
+  const btn=document.getElementById('pngBtn');
+  if(!lxs){alert('Eseguire prima il calcolo.');return;}
+  btn.disabled=true;btn.textContent='[◉] RENDERING...';
+
+  /* ── COSTANTI LAYOUT ──────────────────────── */
+  const W=1684, PAD=52;
+  const BLK='#0a0a0a', DRK='#1a1a1a', MED='#444', LGT='#777', XLT='#bbb';
+  const FILL_HDR='#f5f5f5', FILL_BX='#fafafa', FILL_ALT='#f2f2f2';
+  const GRID_C='#e8e8e8', ZERO_C='#999';
+  const LINE_T='#111', LINE_N='#555', LINE_M='#222';
+
+  /* ── LEGGI REAZIONI DAL DOM ───────────────── */
+  const rxData=[];
+  document.querySelectorAll('.rx-row').forEach(r=>{
+    const c=r.querySelectorAll('span');
+    if(c.length>=4) rxData.push({
+      n:c[0].textContent.trim(), v:c[1].textContent.trim(),
+      u:c[2].textContent.trim(), d:c[3].textContent.trim()
+    });
+  });
+
+  /* ── DIMENSIONI CANVAS ────────────────────── */
+  const SCHEMA_H=230, RXH=34, CH_H=290;
+  const TOTAL_H = PAD
+    + 88 + 12          // intestazione
+    + 28 + SCHEMA_H + 12  // schema
+    + 28 + rxData.length*RXH + 16  // reazioni
+    + 28 + (CH_H+52)*3 // tre diagrammi
+    + 28 + PAD;        // footer
+
+  const cv=document.createElement('canvas');
+  cv.width=W; cv.height=TOTAL_H;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,TOTAL_H);
+
+  /* ── UTILITY ──────────────────────────────── */
+  const fnt=(sz,bold=false)=>{ctx.font=`${bold?'700':'400'} ${sz}px "Share Tech Mono",Courier,monospace`;};
+  const txt=(t,x,y,sz,col,align='left',bold=false)=>{
+    fnt(sz,bold); ctx.fillStyle=col; ctx.textAlign=align; ctx.textBaseline='middle'; ctx.fillText(t,x,y);
+  };
+  const bx=(x,y,w,h,fill,stroke,sw=1)=>{
+    if(fill){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);}
+    if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=sw;ctx.strokeRect(x,y,w,h);}
+  };
+  const hrz=(y,col=XLT,lw=1)=>{
+    ctx.strokeStyle=col;ctx.lineWidth=lw;
+    ctx.beginPath();ctx.moveTo(PAD,y);ctx.lineTo(W-PAD,y);ctx.stroke();
+  };
+  const secHdr=(label,y)=>{
+    bx(PAD,y,W-PAD*2,26,FILL_HDR,XLT);
+    ctx.fillStyle=BLK; ctx.fillRect(PAD,y,4,26);
+    txt(label,PAD+12,y+13,10,BLK,'left',true);
+    return y+26+8;
+  };
+
+  let cy=PAD;
+
+  /* ─── 1. INTESTAZIONE ─────────────────────── */
+  bx(PAD,cy,W-PAD*2,88,FILL_HDR,XLT);
+  ctx.fillStyle=BLK; ctx.fillRect(PAD,cy,5,88);
+  txt('ITIS E. MAJORANA — CASSINO (FR)',PAD+16,cy+15,11,DRK,'left',true);
+  txt('COSTRUZIONI AERONAUTICHE  ·  CLASSE 4ACA  ·  A.S. 2024/25',PAD+16,cy+33,10,MED);
+  fnt(20,true); ctx.fillStyle=BLK; ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText('ANALISI SOLLECITAZIONI — SEMIALA  §2.12',PAD+16,cy+62);
+  const CLBL=['ALA CONTROVENTATA §2.12.2','ALA A SBALZO + MOTORE §2.12.3','ALA RASTREMATA + MOTORE §2.12.4'];
+  const dStr=new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
+  txt(`CASO: ${CLBL[CUR-1]}`,W-PAD-10,cy+15,10,DRK,'right',true);
+  fnt(13,true); ctx.fillStyle=BLK; ctx.textAlign='right'; ctx.textBaseline='middle';
+  ctx.fillText('Prof. B. Raucci',W-PAD-10,cy+42);
+  txt(`Elaborato il: ${dStr}`,W-PAD-10,cy+66,9,LGT,'right');
+  cy+=88+12;
+
+  /* ─── 2. SCHEMA SVG ───────────────────────── */
+  cy=secHdr('SCHEMA STRUTTURALE',cy);
+  bx(PAD,cy,W-PAD*2,SCHEMA_H,FILL_BX,XLT);
+  const svgEl=document.querySelector('#schemaSvg svg');
+  if(svgEl){
+    try{
+      const clone=svgEl.cloneNode(true);
+      const bgr=document.createElementNS('http://www.w3.org/2000/svg','rect');
+      bgr.setAttribute('width','100%'); bgr.setAttribute('height','100%'); bgr.setAttribute('fill','#fff');
+      clone.insertBefore(bgr,clone.firstChild);
+      const svgStr=new XMLSerializer().serializeToString(clone)
+        /* verdi Matrix → quasi-nero per stampa */
+        .replace(/#00ff41/gi,'#111')
+        .replace(/#00cc33/gi,'#222')
+        .replace(/#7fff00/gi,'#333')
+        .replace(/#33e060/gi,'#222')
+        .replace(/rgba\(0,255,65,[^)]+\)/gi,'rgba(0,0,0,.30)')
+        .replace(/rgba\(0,140,45,[^)]+\)/gi,'rgba(0,0,0,.40)')
+        .replace(/rgba\(0,100,40,[^)]+\)/gi,'rgba(0,0,0,.25)')
+        .replace(/rgba\(127,255,0,[^)]+\)/gi,'rgba(0,0,0,.25)')
+        .replace(/rgba\(0,90,18,[^)]+\)/gi,'rgba(0,0,0,.07)')
+        .replace(/#001400/gi,'#fff')
+        .replace(/#005e12/gi,'#888');
+      const blob=new Blob([svgStr],{type:'image/svg+xml;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      await new Promise((res,rej)=>{
+        const img=new Image();
+        img.onload=()=>{
+          const svgW=svgEl.viewBox.baseVal.width||600;
+          const svgH=svgEl.viewBox.baseVal.height||210;
+          const sc=Math.min((W-PAD*2-24)/svgW,(SCHEMA_H-24)/svgH);
+          const dW=svgW*sc, dH=svgH*sc;
+          ctx.drawImage(img,PAD+(W-PAD*2-dW)/2,cy+(SCHEMA_H-dH)/2,dW,dH);
+          URL.revokeObjectURL(url); res();
+        };
+        img.onerror=()=>{URL.revokeObjectURL(url);rej();};
+        img.src=url;
+      });
+    }catch(e){txt('[Schema non disponibile]',W/2,cy+SCHEMA_H/2,11,LGT,'center');}
+  }
+  cy+=SCHEMA_H+12;
+
+  /* ─── 3. TABELLA REAZIONI ─────────────────── */
+  cy=secHdr('REAZIONI VINCOLARI E PARAMETRI STRUTTURALI',cy);
+  const cw1=340,cw2=120,cw3=70;
+  /* header colonne */
+  bx(PAD,cy,W-PAD*2,26,FILL_HDR,XLT);
+  [['GRANDEZZA',PAD+10,'left'],['VALORE',PAD+10+cw1,'right'],
+   ['UNITÀ',PAD+10+cw1+8,'left'],['NOTE',PAD+10+cw1+cw2+cw3,'left']
+  ].forEach(([h,x,a])=>txt(h,x,cy+13,9,LGT,a,true));
+  cy+=26;
+  rxData.forEach((r,i)=>{
+    const ry=cy+RXH/2;
+    bx(PAD,cy,W-PAD*2,RXH,i%2===0?'#fff':FILL_ALT,XLT,.5);
+    txt(r.n, PAD+10,             ry,10,DRK,'left',true);
+    txt(r.v, PAD+10+cw1,         ry,13,BLK,'right',true);
+    txt(r.u, PAD+10+cw1+8,       ry,10,MED,'left');
+    txt(r.d, PAD+10+cw1+cw2+cw3, ry,9, LGT,'left');
+    cy+=RXH;
+  });
+  cy+=16;
+
+  /* ─── 4. DIAGRAMMI (Canvas 2D puro) ──────── */
+  cy=secHdr('DIAGRAMMI DELLE SOLLECITAZIONI',cy);
+
+  /* klines dalla prima chart attiva */
+  const curKlines=Object.values(CHTS)[0]?.config?.options?.klines||[];
+
+  function drawDiagram(data,xs,x0,y0,dw,dh,lineCol,label,unit){
+    const LP=78,RP=18,TP=30,BP=44;
+    const pw=dw-LP-RP, ph=dh-TP-BP;
+    const px0=x0+LP, py0=y0+TP;
+
+    /* range con padding */
+    let mn=data[0],mx=data[0];
+    data.forEach(v=>{if(v<mn)mn=v;if(v>mx)mx=v;});
+    const rng=mx-mn||1, pad=rng*.08;
+    const yMin=mn-pad, yMax=mx+pad;
+    const scX=v=>px0+(v-xs[0])/(xs[xs.length-1]-xs[0])*pw;
+    const scY=v=>py0+ph-(v-yMin)/(yMax-yMin)*ph;
+
+    /* sfondo */
+    bx(x0,y0,dw,dh,'#fff',XLT);
+
+    /* griglie Y */
+    const nY=6;
+    for(let i=0;i<=nY;i++){
+      const val=yMin+(yMax-yMin)*i/nY, py=scY(val);
+      ctx.strokeStyle=GRID_C; ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(px0,py);ctx.lineTo(px0+pw,py);ctx.stroke();
+      fnt(9.5); ctx.fillStyle=LGT; ctx.textAlign='right'; ctx.textBaseline='middle';
+      ctx.fillText(val.toFixed(0),px0-5,py);
+    }
+
+    /* linea zero */
+    if(mn<0&&mx>0){
+      const yz=scY(0);
+      ctx.strokeStyle=ZERO_C; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.moveTo(px0,yz);ctx.lineTo(px0+pw,yz);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    /* griglie X */
+    const nX=10;
+    for(let i=0;i<=nX;i++){
+      const val=xs[0]+(xs[xs.length-1]-xs[0])*i/nX, px=scX(val);
+      ctx.strokeStyle=GRID_C; ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(px,py0);ctx.lineTo(px,py0+ph);ctx.stroke();
+      fnt(9.5); ctx.fillStyle=LGT; ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillText(val.toFixed(2),px,py0+ph+4);
+    }
+
+    /* klines (strutto / motore) */
+    curKlines.forEach(k=>{
+      const px=scX(k.x);
+      if(px<px0||px>px0+pw) return;
+      ctx.strokeStyle='#bbb'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(px,py0);ctx.lineTo(px,py0+ph);ctx.stroke();
+      ctx.setLineDash([]);
+      fnt(9); ctx.fillStyle=MED; ctx.textAlign='center'; ctx.textBaseline='bottom';
+      ctx.fillText(k.label,px,py0-3);
+    });
+
+    /* area positiva */
+    const yz0=scY(Math.max(0,yMin));
+    ctx.beginPath(); ctx.moveTo(scX(xs[0]),yz0);
+    data.forEach((v,i)=>ctx.lineTo(scX(xs[i]),v>=0?scY(v):yz0));
+    ctx.lineTo(scX(xs[xs.length-1]),yz0); ctx.closePath();
+    ctx.fillStyle='rgba(0,0,0,.06)'; ctx.fill();
+
+    /* area negativa */
+    if(mn<0){
+      const yz1=scY(Math.min(0,yMax));
+      ctx.beginPath(); ctx.moveTo(scX(xs[0]),yz1);
+      data.forEach((v,i)=>ctx.lineTo(scX(xs[i]),v<=0?scY(v):yz1));
+      ctx.lineTo(scX(xs[xs.length-1]),yz1); ctx.closePath();
+      ctx.fillStyle='rgba(0,0,0,.03)'; ctx.fill();
+    }
+
+    /* linea diagramma */
+    ctx.strokeStyle=lineCol; ctx.lineWidth=2.2; ctx.lineJoin='round';
+    ctx.beginPath();
+    data.forEach((v,i)=>i===0?ctx.moveTo(scX(xs[i]),scY(v)):ctx.lineTo(scX(xs[i]),scY(v)));
+    ctx.stroke();
+
+    /* assi */
+    ctx.strokeStyle='#555'; ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(px0,py0);ctx.lineTo(px0,py0+ph+1);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px0-1,py0+ph);ctx.lineTo(px0+pw,py0+ph);ctx.stroke();
+
+    /* label asse X */
+    fnt(9); ctx.fillStyle=LGT; ctx.textAlign='center'; ctx.textBaseline='bottom';
+    ctx.fillText('x [m]     R ←────────────→ E',px0+pw/2,py0+ph+BP-2);
+
+    /* titolo + extrema */
+    fnt(12,true); ctx.fillStyle=BLK; ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(`${label}  [${unit}]`,x0+12,py0-14);
+    const sgn=v=>(v>=0?'+':'')+v.toFixed(1);
+    fnt(9.5); ctx.fillStyle=MED; ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText(`max ${sgn(mx)}  |  min ${sgn(mn)}  ${unit}`,x0+dw-8,py0-14);
+  }
+
+  const diagInfo=[
+    {data:lT, lineCol:LINE_T, label:'T(x)  —  TAGLIO',           unit:'N'},
+    {data:lN, lineCol:LINE_N, label:'N(x)  —  SFORZO NORMALE',   unit:'N'},
+    {data:lM, lineCol:LINE_M, label:'Mf(x) —  MOMENTO FLETTENTE',unit:'N·m'},
+  ];
+  diagInfo.forEach(d=>{
+    bx(PAD,cy,W-PAD*2,CH_H+52,null,XLT);
+    ctx.fillStyle=d.lineCol; ctx.fillRect(PAD,cy,3,CH_H+52);
+    drawDiagram(d.data,lxs,PAD+3,cy,W-PAD*2-3,CH_H+52,d.lineCol,d.label,d.unit);
+    cy+=CH_H+52+14;
+  });
+
+  /* ─── FOOTER ──────────────────────────────── */
+  hrz(cy,'#ddd',1); cy+=9;
+  txt('Analisi Sollecitazioni Semiala  ·  ITIS E. Majorana Cassino  ·  Prof. B. Raucci — Costruzioni Aeronautiche 4ACA',
+    W/2,cy+10,9,XLT,'center');
+
+  /* ─── DOWNLOAD ────────────────────────────── */
+  btn.textContent='[◉] DOWNLOAD...';
+  const fname=`sollecitazioni_caso${CUR}_${new Date().toISOString().slice(0,10)}.png`;
+  cv.toBlob(blob=>{
+    const url=URL.createObjectURL(blob);
+    Object.assign(document.createElement('a'),{href:url,download:fname}).click();
+    URL.revokeObjectURL(url);
+    btn.disabled=false; btn.textContent='[▣] STAMPA PNG';
+  },'image/png');
+}
+
+/* ════ INIT ════ */
+renderInputs();
+</script>
+</body>
+</html>
